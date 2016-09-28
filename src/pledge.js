@@ -36,7 +36,15 @@ $Promise.prototype.callHandlers = function(){
 		if (handler.successCb){
 			try {
 				var result = handler.successCb(this._value);
+				if (result instanceof $Promise){
+					console.dir(handler.downstream.$promise);
+					// console.log(handler.downstream.$promise._state);
+					handler.downstream.$promise = result;
+					console.dir(handler.downstream.$promise);
+					handler.downstream.resolve();
+				} else {
 				handler.downstream.resolve(result);
+				}
 			} catch(e) {
 				handler.downstream.reject(e);
 			}
