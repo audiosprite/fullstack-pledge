@@ -167,14 +167,14 @@ describe('Settled promises never change state:', function(){
   // If you used the pending status for your "does not affect
   // already resolved/rejected" specs, these two specs should pass already.
 
-  xit('reject does not overwrite resolve', function(){
+  it('reject does not overwrite resolve', function(){
     deferral.resolve( 'Dumbledore' );
     deferral.reject( 404 );
     expect( promise._state ).toBe( 'resolved' );
     expect( promise._value ).toBe( 'Dumbledore' );
   });
 
-  xit('resolve does not overwrite reject', function(){
+  it('resolve does not overwrite reject', function(){
     deferral.reject( 404 );
     deferral.resolve( 'Dumbledore' );
     expect( promise._state ).toBe( 'rejected' );

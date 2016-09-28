@@ -7,6 +7,59 @@ Promises Workshop: build the pledge.js deferral-style promise library
 var $Promise = function() {
 	this._state = 'pending';
 	this._value;
+	this._handlerGroups = [];
+}
+
+$Promise.prototype.then = function(successHandler, errorHandler){
+	if (typeof(successHandler) !== "function"){
+		successHandler = null;
+	}
+	if (typeof(errorHandler) !== "function"){
+		errorHandler = null;
+	}
+	var handlersObj = {
+		successCb: successHandler,
+		errorCb: errorHandler,
+		downstream: new Deferral()
+	}
+	this._handlerGroups.push(handlersObj);
+	if(this._state === 'resolved' || this._state === 'rejected'){
+		this.callHandlers();
+	}
+	// console.dir(handlersObj.downstream);
+	return handlersObj.downstream.$promise;
+}
+
+$Promise.prototype.callHandlers = function(){
+	var handler = this._handlerGroups.shift();
+	if (this._state === 'resolved'){
+		if (handler.successCb){
+			try {
+				var result = handler.successCb(this._value);
+				handler.downstream.resolve(result);
+			} catch(e) {
+				handler.downstream.reject(e);
+			}
+		} else {
+			handler.downstream.resolve(this._value);
+		}
+	}
+	if (this._state === 'rejected'){
+		if (handler.errorCb){
+			try {
+				var result = handler.errorCb(this._value);
+				handler.downstream.resolve(result);
+			} catch(e) {
+				handler.downstream.reject(e);
+			}
+		} else {
+			handler.downstream.reject(this._value);
+		}
+	}
+}
+
+$Promise.prototype.catch = function(errorHandler){
+	return this.then.call(this, null, errorHandler);
 }
 
 var Deferral = function() {
@@ -16,16 +69,21 @@ var Deferral = function() {
 Deferral.prototype.resolve = function(obj) {
 	if (this.$promise._state === 'pending') {
 		this.$promise._value = obj;
+		this.$promise._state = 'resolved';
+		while (this.$promise._handlerGroups.length){
+			this.$promise.callHandlers();
+		}
 	}
-	this.$promise._state = 'resolved';
 }
 
 Deferral.prototype.reject = function(reason) {
-	if (reason && this.$promise._state === 'pending') {
+	if (this.$promise._state === 'pending') {
 		this.$promise._value = reason;
+		this.$promise._state = 'rejected';
+		while (this.$promise._handlerGroups.length){
+			this.$promise.callHandlers();
+		}
 	}
-	this.$promise._state = 'rejected';
-
 }
 
 
